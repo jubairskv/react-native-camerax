@@ -34,6 +34,7 @@ class CameraxModule(reactContext: ReactApplicationContext) :ReactContextBaseJava
     private lateinit var cameraExecutor: ExecutorService
     private var previewView: PreviewView? = null
     private lateinit var captureButton: Button
+    private var isStarted = false
 
     init {
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -78,16 +79,53 @@ class CameraxModule(reactContext: ReactApplicationContext) :ReactContextBaseJava
 
     @ReactMethod
     fun startCamera(promise: Promise) {
-        val activity = currentActivity ?: return promise.reject("NO_ACTIVITY", "No activity found")
-        
-        if (ContextCompat.checkSelfPermission(reactApplicationContext, Manifest.permission.CAMERA) 
-            != PackageManager.PERMISSION_GRANTED) {
-            return promise.reject("PERMISSION_DENIED", "Camera permission not granted")
+        if (isStarted) {
+            promise.resolve(true)
+            return
         }
 
+        val activity = currentActivity ?: return promise.reject("NO_ACTIVITY", "No activity found")
+        
+        // Check and request permission if needed
+        if (ContextCompat.checkSelfPermission(reactApplicationContext, Manifest.permission.CAMERA) 
+            != PackageManager.PERMISSION_GRANTED) {
+            // Request permission
+            val permissionAwareActivity = activity as? PermissionAwareActivity
+                ?: return promise.reject("NO_ACTIVITY", "No activity found")
+
+            permissionAwareActivity.requestPermissions(
+                arrayOf(Manifest.permission.CAMERA),
+                PERMISSION_REQUEST_CODE,
+                object : PermissionListener {
+                    override fun onRequestPermissionsResult(
+                        requestCode: Int,
+                        permissions: Array<String>,
+                        grantResults: IntArray
+                    ): Boolean {
+                        if (requestCode == PERMISSION_REQUEST_CODE) {
+                            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                                // Permission granted, start camera
+                                activity.runOnUiThread {
+                                    setupUI(activity, promise)
+                                    isStarted = true
+                                }
+                                return true
+                            } else {
+                                promise.reject("PERMISSION_DENIED", "Camera permission not granted")
+                                return true
+                            }
+                        }
+                        return false
+                    }
+                }
+            )
+            return
+        }
+
+        // Permission already granted, start camera
         activity.runOnUiThread {
-            // Call setupUI to initialize the UI and start the camera
             setupUI(activity, promise)
+            isStarted = true
         }
     }
 
@@ -222,26 +260,43 @@ class CameraxModule(reactContext: ReactApplicationContext) :ReactContextBaseJava
 
     @ReactMethod
     fun stopCamera(promise: Promise) {
+        if (!isStarted) {
+            promise.resolve(true)
+            return
+        }
+
         try {
             val activity = currentActivity ?: return promise.reject("NO_ACTIVITY", "No activity found")
             
             activity.runOnUiThread {
-                // Remove PreviewView from activity
-                previewView?.let { preview ->
-                    val rootView = activity.window.decorView.findViewById<ViewGroup>(android.R.id.content)
-                    rootView.removeView(preview)
-                }
+                // Remove camera UI
+                val rootView = activity.window.decorView.findViewById<ViewGroup>(android.R.id.content)
+                rootView.removeAllViews()
                 
                 // Unbind use cases
                 cameraProvider?.unbindAll()
                 previewView = null
                 camera = null
                 preview = null
+                isStarted = false
             }
             
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("CAMERA_ERROR", "Failed to stop camera: ${e.message}")
+        }
+    }
+
+    @ReactMethod
+    fun toggleCamera(promise: Promise) {
+        try {
+            if (isStarted) {
+                stopCamera(promise)
+            } else {
+                startCamera(promise)
+            }
+        } catch (e: Exception) {
+            promise.reject("CAMERA_ERROR", "Failed to toggle camera: ${e.message}")
         }
     }
 

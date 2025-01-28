@@ -17,22 +17,10 @@ const Camera = NativeModules.Camerax
       }
     );
 
+export function toggleCamera(): Promise<boolean> {
+  return Camera.toggleCamera();
+}
+
 export function getDummyText(dateString: string): Promise<string> {
   return Camera.getDummyText(dateString);
-}
-
-export function requestCameraPermission(): Promise<boolean> {
-  return Camera.requestCameraPermission();
-}
-
-export function checkCameraPermission(): Promise<boolean> {
-  return Camera.checkCameraPermission();
-}
-
-export function startCamera(): Promise<boolean> {
-  return Camera.startCamera();
-}
-
-export function stopCamera(): Promise<boolean> {
-  return Camera.stopCamera();
 }
