@@ -6,7 +6,7 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-const Camerax = NativeModules.Camerax
+const Camera = NativeModules.Camerax
   ? NativeModules.Camerax
   : new Proxy(
       {},
@@ -17,6 +17,10 @@ const Camerax = NativeModules.Camerax
       }
     );
 
-export function multiply(a: number, b: number): Promise<number> {
-  return Camerax.multiply(a, b);
+export function toggleCamera(): Promise<boolean> {
+  return Camera.toggleCamera();
+}
+
+export function getDummyText(dateString: string): Promise<string> {
+  return Camera.getDummyText(dateString);
 }
