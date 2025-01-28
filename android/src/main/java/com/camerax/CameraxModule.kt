@@ -17,14 +17,14 @@ import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import android.view.ViewGroup
+import android.widget.Button
 import android.view.Gravity
 import android.widget.TextView
 import android.view.View
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 
-class CameraxModule(reactContext: ReactApplicationContext) :
-    ReactContextBaseJavaModule(reactContext), PermissionListener {
+class CameraxModule(reactContext: ReactApplicationContext) :ReactContextBaseJavaModule(reactContext), PermissionListener {
 
     private val PERMISSION_REQUEST_CODE = 10
     private var permissionPromise: Promise? = null
@@ -33,6 +33,7 @@ class CameraxModule(reactContext: ReactApplicationContext) :
     private var preview: Preview? = null
     private lateinit var cameraExecutor: ExecutorService
     private var previewView: PreviewView? = null
+    private lateinit var captureButton: Button
 
     init {
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -129,6 +130,27 @@ class CameraxModule(reactContext: ReactApplicationContext) :
             }
         }
 
+
+        // Capture Button
+        captureButton = Button(activity).apply {
+            text = "Capture Front ID"
+            setBackgroundColor(Color.parseColor("#59d5ff"))
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            layoutParams = FrameLayout.LayoutParams(
+                800,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                bottomMargin = 50
+            }
+            setPadding(50, 0, 50, 0)
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#59d5ff"))
+                cornerRadius = 30f
+            }
+        }
+
         // ID Card Border Box
         val borderBox = View(activity).apply {
             val metrics = activity.windowManager.defaultDisplay.let { display ->
@@ -155,6 +177,7 @@ class CameraxModule(reactContext: ReactApplicationContext) :
         frameLayout.addView(previewView)
         frameLayout.addView(borderBox)
         frameLayout.addView(instructionTextView)
+        frameLayout.addView(captureButton)
 
         // Set the FrameLayout as the content view of the activity
         activity.setContentView(frameLayout)
